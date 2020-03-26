@@ -1,5 +1,6 @@
 const items = [];
 const hideCheckedItems = false;
+let error = null;
 
 function findById(id) {
 	return this.items.find(item => item.id === id);
@@ -22,6 +23,8 @@ function toggleCheckedFilter() {
 	this.hideCheckedItems = !this.hideCheckedItems;
 }
 
+const setError = error => (this.error = error);
+
 export default {
 	items,
 	hideCheckedItems,
@@ -29,5 +32,7 @@ export default {
 	addItem,
 	findAndUpdate,
 	findAndDelete,
-	toggleCheckedFilter
+	toggleCheckedFilter,
+	error,
+	setError
 };

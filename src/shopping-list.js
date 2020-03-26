@@ -7,7 +7,7 @@ const generateItemElement = function(item) {
 	if (!item.checked) {
 		itemTitle = `
       <form class="js-edit-item">
-        <input class="shopping-item" type="text" value="${item.name}" />
+        <input class="shopping-item" type="text" value="${item.name}" required />
       </form>
     `;
 	}
@@ -31,7 +31,33 @@ const generateShoppingItemsString = function(shoppingList) {
 	return items.join('');
 };
 
+const generateError = function(message) {
+	return `
+      <section class="error-content">
+        <button id="cancel-error">X</button>
+        <p>${message}</p>
+      </section>
+    `;
+};
+
+const renderError = function() {
+	if (store.error) {
+		const el = generateError(store.error);
+		$('.error-container').html(el);
+	} else {
+		$('.error-container').empty();
+	}
+};
+
+const handleCloseError = function() {
+	$('.error-container').on('click', '#cancel-error', () => {
+		store.setError(null);
+		renderError();
+	});
+};
+
 const render = function() {
+	renderError();
 	// Filter item list if store prop is true by item.checked === false
 	let items = [...store.items];
 	if (store.hideCheckedItems) {
@@ -46,10 +72,13 @@ const render = function() {
 const addItemToShoppingList = function(itemName) {
 	api
 		.createItem(itemName)
-		.then(res => res.json())
 		.then(newItem => {
 			store.addItem(newItem);
 			render();
+		})
+		.catch(error => {
+			store.setError(error.message);
+			renderError();
 		});
 };
 
@@ -68,10 +97,17 @@ const handleItemCheckClicked = function() {
 		const id = getItemIdFromElement(event.currentTarget);
 		const item = store.findById(id);
 
-		api.updateItem(id, { checked: !item.checked }).then(() => {
-			store.findAndUpdate(id, { checked: !item.checked });
-			render();
-		});
+		api
+			.updateItem(id, { checked: !item.checked })
+			.then(() => {
+				store.findAndUpdate(id, { checked: !item.checked });
+				render();
+			})
+			.catch(error => {
+				console.log(error);
+				store.setError(error.message);
+				renderError();
+			});
 	});
 };
 
@@ -88,19 +124,16 @@ const handleDeleteItemClicked = function() {
 
 		api
 			.deleteItem(id)
-			.then(res => res.json())
 			.then(() => {
 				store.findAndDelete(id);
 				render();
+			})
+			.catch(error => {
+				console.log(error);
+				store.setError(error.message);
+				renderError();
 			});
 	});
-};
-
-/**
- * Toggles the store.hideCheckedItems property
- */
-const toggleCheckedItemsFilter = function() {
-	store.hideCheckedItems = !store.hideCheckedItems;
 };
 
 /**
@@ -122,10 +155,16 @@ const handleEditShoppingItemSubmit = function() {
 			.find('.shopping-item')
 			.val();
 
-		api.updateItem(id, { name: itemName }).then(() => {
-			store.findAndUpdate(id, { name: itemName });
-			render();
-		});
+		api
+			.updateItem(id, { name: itemName })
+			.then(() => {
+				store.findAndUpdate(id, { name: itemName });
+				render();
+			})
+			.catch(error => {
+				store.setError(error.message);
+				renderError();
+			});
 	});
 };
 
@@ -135,6 +174,7 @@ const bindEventListeners = function() {
 	handleDeleteItemClicked();
 	handleEditShoppingItemSubmit();
 	handleToggleFilterClick();
+	handleCloseError();
 };
 
 // This object contains the only exposed methods from this module:
